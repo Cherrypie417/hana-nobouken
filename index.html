@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>My Dog Game</title>
+    <style>
+        body { text-align: center; background: #222; color: white; font-family: sans-serif; overflow: hidden; }
+        canvas { background: #111; border: 2px solid #fff; display: block; margin: 20px auto; max-width: 100%; height: auto; }
+    </style>
+</head>
+<body>
+    <h1>画面をタップしてスタート！</h1>
+    <canvas id="gameCanvas" width="400" height="300"></canvas>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let birdY = 150, velocity = 0, score = 0, gameOver = false;
+        let pipeX = 400, pipeGap = 100, pipeTop = 100;
+        let gameStarted = false;
+
+        const bgm = new Audio('bgm.mp3');
+        bgm.loop = true;
+
+        const dogImg = new Image();
+        dogImg.src = 'dog.png'; // ここでアップロードした画像を読み込みます
+
+        function draw() {
+            ctx.clearRect(0, 0, 400, 300);
+            
+            // ワンちゃんの画像を描画
+            if(dogImg.complete) {
+                ctx.drawImage(dogImg, 45, birdY - 12, 35, 25);
+            } else {
+                ctx.fillText('🐶', 60, birdY); // 読み込み中は絵文字で代用
+            }
+            
+            ctx.fillStyle = 'green'; ctx.fillRect(pipeX, 0, 40, pipeTop);
+            ctx.fillRect(pipeX, pipeTop + pipeGap, 40, 300);
+            ctx.fillStyle = 'white'; ctx.font = '20px Arial'; ctx.textAlign = 'left'; ctx.fillText("Score: " + score, 10, 30);
+        }
+
+        function loop() {
+            if (!gameStarted) { draw(); ctx.fillStyle = 'white'; ctx.font = '20px Arial'; ctx.textAlign = 'center'; ctx.fillText("TAP TO START", 200, 150); return; }
+            if (gameOver) { draw(); ctx.fillStyle = 'red'; ctx.font = '20px Arial'; ctx.textAlign = 'center'; ctx.fillText("GAME OVER - Tap to Restart", 200, 150); return; }
+            velocity += 0.4; birdY += velocity; pipeX -= 3;
+            if (pipeX < -40) { pipeX = 400; pipeTop = Math.random() * 150 + 30; score++; }
+            if (birdY > 300 || birdY < 0 || (pipeX < 70 && pipeX > 30 && (birdY < pipeTop || birdY > pipeTop + pipeGap))) { gameOver = true; bgm.pause(); }
+            draw(); requestAnimationFrame(loop);
+        }
+
+        function handleStart() {
+            if (!gameStarted) { gameStarted = true; bgm.currentTime = 0; bgm.play(); loop(); } 
+            else if (gameOver) { birdY = 150; velocity = 0; pipeX = 400; score = 0; gameOver = false; gameStarted = false; loop(); } 
+            else { velocity = -6; } 
+        }
+
+        // パソコンのマウスと、スマホ/iPadのタップ両方に対応
+        window.addEventListener('mousedown', handleStart);
+        window.addEventListener('touchstart', (e) => { e.preventDefault(); handleStart(); });
+
+        loop();
+    </script>
+</body>
+</html>
