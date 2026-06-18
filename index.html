@@ -2,84 +2,44 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>My Dog Game with Video Background</title>
+    <title>My Dog Game with Sound Wave</title>
     <style>
-        /* 画面全体の設定 */
-        body { text-align: center; background: #222; color: white; font-family: sans-serif; overflow: hidden; margin: 0; padding: 0; }
-        
-        /* タイトル文字を動画の上に見やすく浮かせる設定 */
+        body { text-align: center; background: #111; color: white; font-family: sans-serif; overflow: hidden; margin: 0; padding: 0; }
         h1 { position: relative; z-index: 10; text-shadow: 2px 2px 4px rgba(0,0,0,0.8); margin-top: 10px; }
 
-        /* ★動画を画面全体に、ゲームの後ろ（最背面）に固定する魔法のCSS */
-        .video-background {
+        /* ★背景画像を画面全体に固定するCSS */
+        .game-background {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            z-index: -1; /* ゲームより後ろにする */
-            pointer-events: none; /* 動画がクリックの邪魔をしないようにする */
-            opacity: 0.6; /* 動画を少し暗くしてゲームを見やすくする（0.0〜1.0で調整可） */
+            z-index: -1; pointer-events: none;
+            background-position: center; background-size: cover; background-repeat: no-repeat;
+            opacity: 0.2; /* ★背景画像をうっすら暗めにしてゲームを見やすくする（0.0〜1.0で調整可） */
         }
-        /* YouTubeの枠自体を画面いっぱいに広げる */
-        .video-background iframe { width: 100%; height: 100%; border: none; }
 
-        /* ゲーム画面（キャンバス）を動画の上に浮かせる */
         canvas { 
             position: relative; z-index: 5; 
-            background: rgba(17, 17, 17, 0.85); /* ★背景を少し透明にして動画をうっすら透けさせる */
+            background: rgba(17, 17, 17, 0.6); /* ★ゲーム画面を透明にして、奥の波形や背景が見えるようにする */
             border: 3px solid #fff; display: block; margin: 10px auto; max-width: 90vw; max-height: 80vh; 
-            box-shadow: 0px 0px 20px rgba(0,0,0,0.8);
+            box-shadow: 0px 0px 30px rgba(0,0,0,0.8);
         }
     </style>
 </head>
 <body>
 
-    <div class="video-background">
-        <div id="ytplayer"></div>
-    </div>
+    <div id="bgArea" class="game-background"></div>
 
     <h1>画面をタップしてスタート！</h1>
     <canvas id="gameCanvas" width="800" height="600"></canvas>
 
     <script>
         // ----------------------------------------------------
-        // 📺 【YouTube背景動画の設定】
-        // 好きなYouTube動画のURLの「watch?v=xxxxxx」の「xxxxxx」の部分をここに入れます
-        // 今はとりあえず、ゲームに合いそうなフリーの癒やし映像（宇宙と星）を入れています。
+        // 🖼️ 【背景画像の設定】
+        // アップロードした背景画像のファイル名をここに入れます
         // ----------------------------------------------------
-        let videoId = 'qJRp5R2KxvE'; 
-
-        // YouTube Player APIの読み込み
-        let tag = document.createElement('script');
-        tag.src = "https://www.youtube.com/iframe_api";
-        let firstScriptTag = document.getElementsByTagName('script')[0];
-        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-
-        let player;
-        function onYouTubeIframeAPIReady() {
-            player = new YT.Player('ytplayer', {
-                videoId: videoId,
-                playerVars: {
-                    'autoplay': 1,       // 自動再生
-                    'controls': 0,       // 再生バーなどを非表示
-                    'disablekb': 1,      // キーボード操作無効
-                    'fs': 0,             // 全画面ボタン非表示
-                    'iv_load_policy': 3, // アノテーション非表示
-                    'modestbranding': 1, // YouTubeロゴを隠す
-                    'rel': 0,            // 関連動画を非表示
-                    'showinfo': 0,       // 動画情報を非表示
-                    'mute': 1,           // ★音はミュート（ゲームのbgm.mp3と重ならないように）
-                    'playlist': videoId  // ループ再生に必須の設定
-                },
-                events: {
-                    'onReady': onPlayerReady,
-                    'onStateChange': onPlayerStateChange
-                }
-            });
-        }
-        function onPlayerReady(event) { event.target.playVideo(); }
-        // 動画が終わったら自動で最初からループさせる処理
-        function onPlayerStateChange(event) { if (event.data === YT.PlayerState.ENDED) { player.playVideo(); } }
+        let bgImageSrc = 'tonkatsu.png'; 
+        document.getElementById('bgArea').style.backgroundImage = `url(${bgImageSrc})`;
 
         // ----------------------------------------------------
-        // 🎮 【ゲームのプログラム（中身はそのまま）】
+        // 🎮 【ゲームとサウンド波形のプログラム】
         // ----------------------------------------------------
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
@@ -93,9 +53,63 @@
         const dogImg = new Image();
         dogImg.src = 'dog.png';
 
+        // 🎵 【サウンド解析（波形用）の設定】
+        let audioCtx, analyser, source, bufferLength, dataArray;
+        let isAudioSetup = false;
+
+        function setupAudio() {
+            if (isAudioSetup) return;
+            // 音を解析する仕組み（Web Audio API）を立ち上げる
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioCtx.createAnalyser();
+            source = audioCtx.createMediaElementSource(bgm);
+            source.connect(analyser);
+            analyser.connect(audioCtx.destination);
+            analyser.fftSize = 128; // 波形の細かさ設定
+            bufferLength = analyser.frequencyBinCount;
+            dataArray = new Uint8Array(bufferLength);
+            isAudioSetup = true;
+        }
+
+        // 📊 【サウンドの波（ビジュアライザー）を描画する関数】
+        function drawSoundWave() {
+            if (!isAudioSetup) return;
+            analyser.getByteFrequencyData(dataArray); // 現在の音の強さを取得
+
+            // 画面の下側に、左右対称の綺麗なネオンの波を描く
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = 'rgba(0, 255, 200, 0.6)'; // さわやかなミントグリーンのネオン光
+            ctx.beginPath();
+
+            let sliceWidth = 800 / (bufferLength * 2);
+            let x = 0;
+
+            // 左から中央へ向かう波
+            for (let i = 0; i < bufferLength; i++) {
+                let v = dataArray[i] / 128.0;
+                let y = 550 - (v * 70); // 音が強いほど上に飛び跳ねる
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+                x += sliceWidth;
+            }
+            // 中央から右へ向かう波（左右対称にする）
+            for (let i = bufferLength - 1; i >= 0; i--) {
+                let v = dataArray[i] / 128.0;
+                let y = 550 - (v * 70);
+                ctx.lineTo(x, y);
+                x += sliceWidth;
+            }
+            ctx.stroke();
+        }
+
         function draw() {
             ctx.clearRect(0, 0, 800, 600);
             
+            // ★ゲーム画面の奥にサウンドの波を描画
+            if (gameStarted && !gameOver) {
+                drawSoundWave();
+            }
+
             if(dogImg.complete) {
                 ctx.drawImage(dogImg, 50, birdY - 37.5, 105, 75);
             }
@@ -134,6 +148,12 @@
         }
 
         function handleStart() {
+            // タップされた瞬間にサウンド機能を初期化する
+            setupAudio();
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
             if (!gameStarted) { gameStarted = true; bgm.currentTime = 0; bgm.play(); loop(); } 
             else if (gameOver) { birdY = 300; velocity = 0; pipeX = 800; score = 0; gameOver = false; gameStarted = false; loop(); } 
             else { velocity = -9; } 
