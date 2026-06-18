@@ -27,11 +27,12 @@
         function draw() {
             ctx.clearRect(0, 0, 800, 600);
             
-            // ★スタート前もゲーム中も、画像があれば「常に3倍サイズ（横210px、縦150px）」で描画します！
+            // ★ワンちゃんのサイズを「横105px、縦75px」のちょうどいいサイズに調整！
             if(dogImg.complete) {
-                ctx.drawImage(dogImg, 50, birdY - 75, 210, 150);
+                // 中心位置がズレないように調整しています
+                ctx.drawImage(dogImg, 50, birdY - 37.5, 105, 75);
             } else {
-                ctx.font = '120px Arial'; 
+                ctx.font = '60px Arial'; // 絵文字の場合もほどよい大きさに
                 ctx.fillText('🐶', 110, birdY);
             }
             
@@ -60,13 +61,14 @@
             
             if (pipeX < -80) { pipeX = 800; pipeTop = Math.random() * 300 + 50; score++; }
             
-            // ★ドデカ犬に合わせた当たり判定（体が土管に少しめり込むくらいの絶妙な判定）
-            if (birdY > 600 || birdY < 0 || (pipeX < 210 && pipeX > 20 && (birdY - 35 < pipeTop || birdY + 35 > pipeTop + pipeGap))) { 
+            // ★小さくなったサイズに合わせて当たり判定もぴったりに再調整！
+            // これで理不尽に土管にぶつかることがなくなります
+            if (birdY > 600 || birdY < 0 || (pipeX < 155 && pipeX > 20 && (birdY - 25 < pipeTop || birdY + 25 > pipeTop + pipeGap))) { 
                 gameOver = true; 
                 bgm.pause(); 
             }
             
-            draw(); // ★ここでゲーム中も常に上のdraw()を呼び出してデカいサイズを維持します
+            draw(); 
             requestAnimationFrame(loop);
         }
 
