@@ -5,7 +5,6 @@
     <title>My Dog Game</title>
     <style>
         body { text-align: center; background: #222; color: white; font-family: sans-serif; overflow: hidden; }
-        /* 迫力が出るように、全体の表示サイズも調整 */
         canvas { background: #111; border: 3px solid #fff; display: block; margin: 20px auto; max-width: 90vw; max-height: 80vh; }
     </style>
 </head>
@@ -15,7 +14,6 @@
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        // 画面が広くなったので、初期位置や土管の隙間を調整
         let birdY = 300, velocity = 0, score = 0, gameOver = false;
         let pipeX = 800, pipeGap = 160, pipeTop = 200;
         let gameStarted = false;
@@ -29,19 +27,18 @@
         function draw() {
             ctx.clearRect(0, 0, 800, 600);
             
-            // ★ワンちゃんの画像サイズを「横70px、縦50px」にデカくしました！（位置調整も実施）
+            // ★ワンちゃんの画像サイズを3倍（横210px、縦150px）にデカくしました！
             if(dogImg.complete) {
-                ctx.drawImage(dogImg, 90, birdY - 25, 70, 50);
+                // 中心がブレないように描画位置（ birdY から引く値 ）も調整しています
+                ctx.drawImage(dogImg, 50, birdY - 75, 210, 150);
             } else {
-                ctx.font = '48px Arial'; // 絵文字も大きく
+                ctx.font = '120px Arial'; // 絵文字の場合も大迫力に
                 ctx.fillText('🐶', 110, birdY);
             }
             
-            // 土管の幅も太く（40px -> 80px）してバランスを調整
             ctx.fillStyle = 'green'; ctx.fillRect(pipeX, 0, 80, pipeTop);
             ctx.fillRect(pipeX, pipeTop + pipeGap, 80, 600);
             
-            // スコアの文字も大きく
             ctx.fillStyle = 'white'; ctx.font = '30px Arial'; ctx.textBaseline = 'top'; ctx.textAlign = 'left'; 
             ctx.fillText("Score: " + score, 20, 20);
         }
@@ -60,13 +57,14 @@
                 return; 
             }
             
-            // 重力と移動速度も、画面の広さに合わせて気持ちよく遊べるように調整
             velocity += 0.5; birdY += velocity; pipeX -= 5;
             
             if (pipeX < -80) { pipeX = 800; pipeTop = Math.random() * 300 + 50; score++; }
             
-            // 当たり判定もデカくなったサイズに合わせて再計算
-            if (birdY > 600 || birdY < 0 || (pipeX < 160 && pipeX > 50 && (birdY - 15 < pipeTop || birdY + 15 > pipeTop + pipeGap))) { 
+            // ★当たり判定の調整
+            // 画像は縦150pxですが、判定をそのままにすると難すぎるので、
+            // ワンちゃんの体が土管にめり込みすぎない絶妙な範囲（上下35px）に調整しています。
+            if (birdY > 600 || birdY < 0 || (pipeX < 210 && pipeX > 20 && (birdY - 35 < pipeTop || birdY + 35 > pipeTop + pipeGap))) { 
                 gameOver = true; 
                 bgm.pause(); 
             }
@@ -77,7 +75,7 @@
         function handleStart() {
             if (!gameStarted) { gameStarted = true; bgm.currentTime = 0; bgm.play(); loop(); } 
             else if (gameOver) { birdY = 300; velocity = 0; pipeX = 800; score = 0; gameOver = false; gameStarted = false; loop(); } 
-            else { velocity = -9; } // ジャンプ力もアップ！
+            else { velocity = -9; } 
         }
 
         window.addEventListener('mousedown', handleStart);
