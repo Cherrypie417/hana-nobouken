@@ -2,12 +2,11 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>My Dog Game with Video Background</title>
+    <title>My Dog Game with Dynamic Sound Wave</title>
     <style>
         body { text-align: center; background: #222; color: white; font-family: sans-serif; overflow: hidden; margin: 0; padding: 0; }
         h1 { position: relative; z-index: 10; text-shadow: 2px 2px 4px rgba(0,0,0,0.8); margin-top: 10px; }
 
-        /* ★ゲームと動画を同じ位置に重ねるための外枠（コンテナ） */
         .game-container {
             position: relative;
             width: 800px;
@@ -17,23 +16,21 @@
             max-height: 80vh;
             box-shadow: 0px 0px 30px rgba(0,0,0,0.8);
             border: 3px solid #fff;
-            overflow: hidden; /* はみ出た動画をカットする */
+            overflow: hidden;
         }
 
-        /* ★動画をコンテナサイズ（800x600）にぴったり合わせる */
         .video-background {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 1; /* ゲームの真後ろ */
+            z-index: 1;
             pointer-events: none;
-            opacity: 0.6; /* 動画の透明度（お好みで調整してください） */
+            opacity: 0.6;
         }
         .video-background iframe { width: 100%; height: 100%; border: none; }
 
-        /* ★ゲーム画面（キャンバス）を動画のすぐ上に重ねる */
         canvas { 
             position: absolute; top: 0; left: 0;
-            z-index: 5; /* 動画の上 */
-            background: rgba(17, 17, 17, 0.4); /* 背景を少し透明にして動画を透けさせる */
+            z-index: 5;
+            background: rgba(17, 17, 17, 0.4);
             width: 100%; height: 100%;
         }
     </style>
@@ -63,15 +60,15 @@
             player = new YT.Player('ytplayer', {
                 videoId: videoId,
                 playerVars: {
-                    'autoplay': 1,       // 自動再生
-                    'controls': 0,       // 再生バーを隠す
+                    'autoplay': 1,
+                    'controls': 0,
                     'disablekb': 1,
                     'fs': 0,
                     'iv_load_policy': 3,
                     'modestbranding': 1,
                     'rel': 0,
                     'showinfo': 0,
-                    'mute': 1,           // ミュート
+                    'mute': 1,
                     'playlist': videoId
                 },
                 events: {
@@ -96,9 +93,67 @@
         const dogImg = new Image();
         dogImg.src = 'dog.png';
 
+        // 🎵 【サウンド解析の設定】
+        let audioCtx, analyser, source, bufferLength, dataArray;
+        let isAudioSetup = false;
+
+        function setupAudio() {
+            if (isAudioSetup) return;
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioCtx.createAnalyser();
+            source = audioCtx.createMediaElementSource(bgm);
+            source.connect(analyser);
+            analyser.connect(audioCtx.destination);
+            analyser.fftSize = 128; // 波の細かさ
+            bufferLength = analyser.frequencyBinCount;
+            dataArray = new Uint8Array(bufferLength);
+            isAudioSetup = true;
+        }
+
+        // 📊 【大迫力のサウンド波形を描画する関数】
+        function drawSoundWave() {
+            if (!isAudioSetup) return;
+            analyser.getByteFrequencyData(dataArray);
+
+            ctx.lineWidth = 6; // ★波の線を太くして存在感をアップ
+            ctx.strokeStyle = 'rgba(0, 255, 200, 0.7)'; 
+            ctx.shadowBlur = 15; // ★ネオンみたいに光らせるエフェクト
+            ctx.shadowColor = 'rgba(0, 255, 200, 0.8)';
+            ctx.beginPath();
+
+            let sliceWidth = 800 / (bufferLength * 2);
+            let x = 0;
+
+            // 左から中央へ
+            for (let i = 0; i < bufferLength; i++) {
+                let v = dataArray[i] / 128.0;
+                // ★高さを画面の真ん中（300px）ベースにして、音の増幅率を大きく（* 180）しました！
+                let y = 300 - (v - 1.0) * 180; 
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+                x += sliceWidth;
+            }
+            // 中央から右へ（左右対称）
+            for (let i = bufferLength - 1; i >= 0; i--) {
+                let v = dataArray[i] / 128.0;
+                let y = 300 - (v - 1.0) * 180;
+                ctx.lineTo(x, y);
+                x += sliceWidth;
+            }
+            ctx.stroke();
+            
+            // 次の描画のためにシャドウ効果をリセット
+            ctx.shadowBlur = 0;
+        }
+
         function draw() {
             ctx.clearRect(0, 0, 800, 600);
             
+            // ゲーム中、背景動画の手前・土管の奥に激しい波を描画
+            if (gameStarted && !gameOver) {
+                drawSoundWave();
+            }
+
             if(dogImg.complete) {
                 ctx.drawImage(dogImg, 50, birdY - 37.5, 105, 75);
             }
@@ -137,6 +192,11 @@
         }
 
         function handleStart() {
+            setupAudio();
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
             if (!gameStarted) { gameStarted = true; bgm.currentTime = 0; bgm.play(); loop(); } 
             else if (gameOver) { birdY = 300; velocity = 0; pipeX = 800; score = 0; gameOver = false; gameStarted = false; loop(); } 
             else { velocity = -9; } 
