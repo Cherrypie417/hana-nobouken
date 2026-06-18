@@ -5,56 +5,81 @@
     <title>My Dog Game</title>
     <style>
         body { text-align: center; background: #222; color: white; font-family: sans-serif; overflow: hidden; }
-        canvas { background: #111; border: 2px solid #fff; display: block; margin: 20px auto; max-width: 100%; height: auto; }
+        /* 迫力が出るように、全体の表示サイズも調整 */
+        canvas { background: #111; border: 3px solid #fff; display: block; margin: 20px auto; max-width: 90vw; max-height: 80vh; }
     </style>
 </head>
 <body>
     <h1>画面をタップしてスタート！</h1>
-    <canvas id="gameCanvas" width="400" height="300"></canvas>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        let birdY = 150, velocity = 0, score = 0, gameOver = false;
-        let pipeX = 400, pipeGap = 100, pipeTop = 100;
+        // 画面が広くなったので、初期位置や土管の隙間を調整
+        let birdY = 300, velocity = 0, score = 0, gameOver = false;
+        let pipeX = 800, pipeGap = 160, pipeTop = 200;
         let gameStarted = false;
 
         const bgm = new Audio('bgm.mp3');
         bgm.loop = true;
 
         const dogImg = new Image();
-        dogImg.src = 'dog.png'; // ここでアップロードした画像を読み込みます
+        dogImg.src = 'dog.png';
 
         function draw() {
-            ctx.clearRect(0, 0, 400, 300);
+            ctx.clearRect(0, 0, 800, 600);
             
-            // ワンちゃんの画像を描画
+            // ★ワンちゃんの画像サイズを「横70px、縦50px」にデカくしました！（位置調整も実施）
             if(dogImg.complete) {
-                ctx.drawImage(dogImg, 45, birdY - 12, 35, 25);
+                ctx.drawImage(dogImg, 90, birdY - 25, 70, 50);
             } else {
-                ctx.fillText('🐶', 60, birdY); // 読み込み中は絵文字で代用
+                ctx.font = '48px Arial'; // 絵文字も大きく
+                ctx.fillText('🐶', 110, birdY);
             }
             
-            ctx.fillStyle = 'green'; ctx.fillRect(pipeX, 0, 40, pipeTop);
-            ctx.fillRect(pipeX, pipeTop + pipeGap, 40, 300);
-            ctx.fillStyle = 'white'; ctx.font = '20px Arial'; ctx.textAlign = 'left'; ctx.fillText("Score: " + score, 10, 30);
+            // 土管の幅も太く（40px -> 80px）してバランスを調整
+            ctx.fillStyle = 'green'; ctx.fillRect(pipeX, 0, 80, pipeTop);
+            ctx.fillRect(pipeX, pipeTop + pipeGap, 80, 600);
+            
+            // スコアの文字も大きく
+            ctx.fillStyle = 'white'; ctx.font = '30px Arial'; ctx.textBaseline = 'top'; ctx.textAlign = 'left'; 
+            ctx.fillText("Score: " + score, 20, 20);
         }
 
         function loop() {
-            if (!gameStarted) { draw(); ctx.fillStyle = 'white'; ctx.font = '20px Arial'; ctx.textAlign = 'center'; ctx.fillText("TAP TO START", 200, 150); return; }
-            if (gameOver) { draw(); ctx.fillStyle = 'red'; ctx.font = '20px Arial'; ctx.textAlign = 'center'; ctx.fillText("GAME OVER - Tap to Restart", 200, 150); return; }
-            velocity += 0.4; birdY += velocity; pipeX -= 3;
-            if (pipeX < -40) { pipeX = 400; pipeTop = Math.random() * 150 + 30; score++; }
-            if (birdY > 300 || birdY < 0 || (pipeX < 70 && pipeX > 30 && (birdY < pipeTop || birdY > pipeTop + pipeGap))) { gameOver = true; bgm.pause(); }
-            draw(); requestAnimationFrame(loop);
+            if (!gameStarted) { 
+                draw(); 
+                ctx.fillStyle = 'white'; ctx.font = '40px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText("TAP TO START", 400, 300); 
+                return; 
+            }
+            if (gameOver) { 
+                draw(); 
+                ctx.fillStyle = 'red'; ctx.font = '40px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText("GAME OVER - Tap to Restart", 400, 300); 
+                return; 
+            }
+            
+            // 重力と移動速度も、画面の広さに合わせて気持ちよく遊べるように調整
+            velocity += 0.5; birdY += velocity; pipeX -= 5;
+            
+            if (pipeX < -80) { pipeX = 800; pipeTop = Math.random() * 300 + 50; score++; }
+            
+            // 当たり判定もデカくなったサイズに合わせて再計算
+            if (birdY > 600 || birdY < 0 || (pipeX < 160 && pipeX > 50 && (birdY - 15 < pipeTop || birdY + 15 > pipeTop + pipeGap))) { 
+                gameOver = true; 
+                bgm.pause(); 
+            }
+            draw(); 
+            requestAnimationFrame(loop);
         }
 
         function handleStart() {
             if (!gameStarted) { gameStarted = true; bgm.currentTime = 0; bgm.play(); loop(); } 
-            else if (gameOver) { birdY = 150; velocity = 0; pipeX = 400; score = 0; gameOver = false; gameStarted = false; loop(); } 
-            else { velocity = -6; } 
+            else if (gameOver) { birdY = 300; velocity = 0; pipeX = 800; score = 0; gameOver = false; gameStarted = false; loop(); } 
+            else { velocity = -9; } // ジャンプ力もアップ！
         }
 
-        // パソコンのマウスと、スマホ/iPadのタップ両方に対応
         window.addEventListener('mousedown', handleStart);
         window.addEventListener('touchstart', (e) => { e.preventDefault(); handleStart(); });
 
