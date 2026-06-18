@@ -27,13 +27,10 @@
         function draw() {
             ctx.clearRect(0, 0, 800, 600);
             
-            // ★ワンちゃんのサイズを「横105px、縦75px」のちょうどいいサイズに調整！
+            // ★絵文字（🐶）の代用を完全に廃止しました！
+            // 画像の読み込みが完了している時だけ、本物のワンちゃんを綺麗に描画します。
             if(dogImg.complete) {
-                // 中心位置がズレないように調整しています
-                ctx.drawImage(dogImg, 50, birdY - 37.5, 95, 65);
-            } else {
-                ctx.font = '60px Arial'; // 絵文字の場合もほどよい大きさに
-                ctx.fillText('🐶', 110, birdY);
+                ctx.drawImage(dogImg, 50, birdY - 37.5, 100, 70);
             }
             
             ctx.fillStyle = 'green'; ctx.fillRect(pipeX, 0, 80, pipeTop);
@@ -61,8 +58,6 @@
             
             if (pipeX < -80) { pipeX = 800; pipeTop = Math.random() * 300 + 50; score++; }
             
-            // ★小さくなったサイズに合わせて当たり判定もぴったりに再調整！
-            // これで理不尽に土管にぶつかることがなくなります
             if (birdY > 600 || birdY < 0 || (pipeX < 155 && pipeX > 20 && (birdY - 25 < pipeTop || birdY + 25 > pipeTop + pipeGap))) { 
                 gameOver = true; 
                 bgm.pause(); 
